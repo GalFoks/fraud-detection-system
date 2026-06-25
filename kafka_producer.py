@@ -3,11 +3,15 @@ from kafka import KafkaProducer
 import json
 import time
 
+
+import os
+
 # 1. Konfigurasi Kafka Producer
-print("Menghubungkan ke Server Kafka...")
+KAFKA_SERVER = os.getenv('KAFKA_BOOTSTRAP_SERVER', 'localhost:9092')
+print(f"Menghubungkan ke Server Kafka: {KAFKA_SERVER}...")
 producer = KafkaProducer(
-    bootstrap_servers=['localhost:9092'], # Alamat server Docker Anda
-    value_serializer=lambda v: json.dumps(v).encode('utf-8') # Mengubah data menjadi format JSON
+    bootstrap_servers=[KAFKA_SERVER],
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
 # Nama jalur/topik tempat data akan mengalir
