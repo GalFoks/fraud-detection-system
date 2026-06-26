@@ -16,10 +16,11 @@
 *.pkl
 *.joblib
 
-# File output dari visualisasi / logging (bisa di-generate ulang)
-fraud_dashboard.png
-fraud_monitoring_log.csv
-*.log
+# === PENGECUALIAN: file-file project ini TETAP di-push meskipun cocok pola di atas ===
+!fraud_model.pkl
+!model_features.pkl
+!fraud_monitoring_log.csv
+!fraud_dashboard.png
 
 # Folder data dan output
 data/
@@ -250,5 +251,3 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
-
