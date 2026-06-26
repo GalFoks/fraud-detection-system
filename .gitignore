@@ -1,3 +1,37 @@
+# ============================================
+# PROJECT-SPECIFIC: Fraud Detection System
+# ============================================
+
+# Dataset mentah dan hasil olahan (UKURAN BESAR!)
+*.csv
+*.parquet
+*.parquet/
+*.xlsx
+*.xls
+*.zip
+*.tar.gz
+*.7z
+
+# File model terlatih (kecuali yang sudah terpush, ini untuk mencegah file baru)
+*.pkl
+*.joblib
+
+# File output dari visualisasi / logging (bisa di-generate ulang)
+fraud_dashboard.png
+fraud_monitoring_log.csv
+*.log
+
+# Folder data dan output
+data/
+datasets/
+raw_data/
+processed_data/
+outputs/
+models/
+
+# Streamlit secrets (jika pakai)
+.streamlit/secrets.toml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -216,3 +250,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
