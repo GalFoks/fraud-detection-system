@@ -16,6 +16,11 @@
 *.pkl
 *.joblib
 
+# Output logs dan gambar sementara (opsional)
+*.log
+*.jpg
+*.jpeg
+
 # === PENGECUALIAN: file-file project ini TETAP di-push meskipun cocok pola di atas ===
 !fraud_model.pkl
 !model_features.pkl
