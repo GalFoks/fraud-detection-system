@@ -1,103 +1,140 @@
-Real-Time Fraud Detection System
+# Real-Time Fraud Detection System
 
 Sistem deteksi penipuan transaksi kartu kredit berbasis streaming yang dirancang untuk memberikan keputusan klasifikasi secara real-time. Proyek ini mengintegrasikan pemrosesan Big Data, infrastruktur messaging berkecepatan tinggi, dan model machine learning yang dioptimalkan untuk menjaga stabilitas risiko perbankan.
 
-Overview
+## Overview
 
 Sistem ini mensimulasikan alur kerja perbankan modern:
 
+- **Producer**: Mensimulasikan transaksi nasabah secara kontinu.
+- **Streaming Pipeline**: Menggunakan Apache Kafka untuk menangani aliran data real-time.
+- **Detection Engine**: Model XGBoost yang dilatih untuk mendeteksi anomali penipuan (Fraud).
+- **Monitoring**: Pencatatan otomatis keputusan sistem ke dalam database log (CSV) untuk keperluan audit dan visualisasi.
 
-Producer: Mensimulasikan transaksi nasabah secara kontinu.
-Streaming Pipeline: Menggunakan Apache Kafka untuk menangani aliran data real-time.
-Detection Engine: Model XGBoost yang dilatih untuk mendeteksi anomali penipuan (Fraud).
-Monitoring: Pencatatan otomatis keputusan sistem ke dalam database log (CSV) untuk keperluan audit dan visualisasi.
+## Pipeline Architecture
 
-
-Pipeline Architecture
-
+```
 graph LR
     A[Data Source] --> B(Producer)
     B --> C{Kafka Topics}
     C --> D(Consumer + AI Model)
     D --> E[Dashboard/Log]
+```
 
-Dataset
+## Dataset & Data Pipeline
 
-Proyek ini menggunakan dataset transaksi kartu kredit yang sudah melalui proses feature engineering.
+Proyek ini menggunakan dataset **[Credit Card Transactions Fraud Detection Dataset](https://www.kaggle.com/datasets/kartik2112/fraud-detection)** dari Kaggle (disimulasikan menggunakan tool Sparkov).
 
+> File dataset mentah (`fraudTrain.csv`, `fraudTest.csv`) dan file `.parquet` hasil olahan **tidak disertakan** di repository ini karena ukurannya besar. Silakan download dataset dari link di atas, lalu jalankan tahapan berikut secara berurutan untuk menghasilkan file yang dibutuhkan oleh `kafka_producer.py` dan `train_model.py`.
 
-Sumber dataset asli: <!-- TODO: isi link/nama dataset, misal Kaggle Credit Card Fraud Dataset -->
-File yang dibutuhkan: fraudTrain_engineered.parquet
+### Tahapan Data Pipeline
 
+| Tahap | Script | Input | Output |
+|---|---|---|---|
+| 1. Optimasi & Konversi | `ubahukurandata.py` | `fraudTrain.csv`, `fraudTest.csv` | `fraudTrain_optimized.parquet`, `fraudTest_optimized.parquet` |
+| 2. Feature Engineering | `Feature_Engineering.py` *(PySpark)* | `fraudTrain_optimized.parquet` | `fraudTrain_engineered.parquet` |
+| 3. Training Model | `train_model.py` | `fraudTrain_engineered.parquet` | `fraud_model.pkl`, `model_features.pkl` |
 
+**Detail tiap tahap:**
 
-File .parquet ini tidak disertakan di repository ini karena ukurannya besar. Silakan download dataset asli dari sumber di atas, lalu jalankan script feature engineering (atau train_model.py, jika mencakup proses tersebut) untuk menghasilkan file fraudTrain_engineered.parquet sebelum menjalankan kafka_producer.py.
+1. **`ubahukurandata.py`** — Downcasting tipe data (`int64`/`float64` ke tipe yang lebih kecil) dan mengubah kolom teks berulang (`merchant`, `category`, `gender`, `city`, `state`, `job`) menjadi tipe `category`, lalu menyimpan hasil sebagai Parquet untuk menghemat RAM & ukuran file.
+   ```bash
+   python ubahukurandata.py
+   ```
 
+2. **`Feature_Engineering.py`** — Menghitung fitur tambahan menggunakan PySpark: `distance_km` (jarak geografis nasabah-merchant via haversine formula) dan *velocity features* (`trans_count_1h`, `amt_sum_1h`, dll) menggunakan Spark Window function per `cc_num`. Membutuhkan PySpark terinstal.
+   ```bash
+   python Feature_Engineering.py
+   ```
 
+3. **`train_model.py`** — Melatih model XGBoost dan menyimpan model + daftar fitur. Lihat bagian [Execution Instructions](#execution-instructions) di bawah untuk menjalankan training secara penuh.
 
-Installation & Setup
+> **Catatan:** Pastikan setiap script dijalankan di folder yang sama dengan file data yang dibutuhkan, karena path file di dalam script bersifat relatif (tanpa folder `data/`).
 
-Pastikan Anda telah menginstal Docker Desktop dan Python 3.x.
+## Installation & Setup
 
-1. Clone Repository
+Pastikan Anda telah menginstal **Docker Desktop** dan **Python 3.x**.
 
-bashgit clone https://github.com/GalFoks/<nama-repo-anda>.git
-cd <nama-repo-anda>
+### 1. Clone Repository
 
-2. Setup Virtual Environment
+```bash
+git clone https://github.com/GalFoks/fraud-detection-system.git
+cd fraud-detection-system
+```
 
-bashpython -m venv myvenv
+### 2. Setup Virtual Environment
+
+```bash
+python -m venv myvenv
 source myvenv/bin/activate  # atau myvenv\Scripts\activate di Windows
 python -m pip install -r requirements.txt
+```
 
-3. Jalankan Infrastruktur Kafka
+### 3. Jalankan Infrastruktur Kafka
 
-bashdocker-compose up -d
+```bash
+docker-compose up -d
+```
 
+> Pastikan file `docker-compose.yml` tersedia di root project. File ini mendefinisikan service Kafka dan Zookeeper yang dibutuhkan sistem.
 
-Pastikan file docker-compose.yml tersedia di root project. File ini mendefinisikan service Kafka dan Zookeeper yang dibutuhkan sistem.
+## Configuration (Opsional)
 
-
-
-Configuration (Opsional)
-
-Secara default, kafka_producer.py dan kafka_consumer.py terhubung ke Kafka di localhost:9092.
+Secara default, `kafka_producer.py` dan `kafka_consumer.py` terhubung ke Kafka di `localhost:9092`.
 
 Untuk menggunakan server Kafka lain (misalnya saat deployment), set environment variable berikut sebelum menjalankan script:
 
-bash# Linux / macOS
+```bash
+# Linux / macOS
 export KAFKA_BOOTSTRAP_SERVER=alamat_server:9092
 
 # Windows (PowerShell)
 $env:KAFKA_BOOTSTRAP_SERVER="alamat_server:9092"
+```
 
-Execution Instructions
+## Execution Instructions
+
+> Pastikan tahapan [Data Pipeline](#dataset--data-pipeline) di atas sudah dijalankan terlebih dahulu, sehingga `fraud_model.pkl`, `model_features.pkl`, dan `fraudTrain_engineered.parquet` sudah tersedia.
 
 Jalankan sistem dalam urutan berikut:
 
-1. Start Detection System
+### 1. (Jika belum) Latih Model
 
-bashpython kafka_consumer.py
+```bash
+python train_model.py
+```
 
-2. Start Transaction Simulation
+### 2. Start Detection System
+
+```bash
+python kafka_consumer.py
+```
+
+### 3. Start Transaction Simulation
 
 Buka terminal baru, lalu jalankan:
 
-bashpython kafka_producer.py
+```bash
+python kafka_producer.py
+```
 
-Key Features & Performance
+## Key Features & Performance
 
+- **Optimized Recall (82%)**: Model XGBoost dikalibrasi menggunakan `scale_pos_weight` untuk memastikan penipuan dapat terdeteksi dengan tingkat sensitivitas tinggi.
+- **Feature Engineering**: Memanfaatkan Time-Series Features (`trans_hour`, `trans_day`) untuk meningkatkan akurasi pendeteksian anomali.
+- **Efficient Risk Mitigation**: Mengurangi False Positives secara drastis melalui kalibrasi bobot, yang secara langsung menekan biaya operasional penanganan komplain nasabah.
 
-Optimized Recall (82%): Model XGBoost dikalibrasi menggunakan scale_pos_weight untuk memastikan penipuan dapat terdeteksi dengan tingkat sensitivitas tinggi.
-Feature Engineering: Memanfaatkan Time-Series Features (trans_hour, trans_day) untuk meningkatkan akurasi pendeteksian anomali.
-Efficient Risk Mitigation: Mengurangi False Positives secara drastis melalui kalibrasi bobot, yang secara langsung menekan biaya operasional penanganan komplain nasabah.
+## Project Structure
 
+| File | Deskripsi |
+|---|---|
+| `ubahukurandata.py` | Optimasi tipe data & konversi CSV mentah ke Parquet. |
+| `Feature_Engineering.py` | Feature engineering (PySpark): jarak geografis & velocity features. |
+| `train_model.py` | Skrip untuk melatih dan mengoptimasi model AI. |
+| `kafka_producer.py` | Simulator aplikasi transaksi perbankan. |
+| `kafka_consumer.py` | Backend AI yang melakukan deteksi real-time. |
+| `visualize_log.py` | Skrip untuk menghasilkan visualisasi performa sistem. |
+| `fraud_model.pkl` | Model XGBoost yang sudah dilatih (output dari `train_model.py`). |
+| `model_features.pkl` | Daftar fitur yang digunakan model saat training & inference. |
+| `requirements.txt` | Daftar dependency Python yang dibutuhkan. |
 
-Project Structure
-
-FileDeskripsitrain_model.pySkrip untuk melatih dan mengoptimasi model AI.kafka_producer.pySimulator aplikasi transaksi perbankan.kafka_consumer.pyBackend AI yang melakukan deteksi real-time.visualize_log.pySkrip untuk menghasilkan visualisasi performa sistem.model_features.pklDaftar fitur yang digunakan model saat training & inference.requirements.txtDaftar dependency Python yang dibutuhkan.
-
-<!-- TODO: konfirmasi nama file model terlatih — apakah fraud_model.pkl ada di repo, atau modelnya tersimpan dengan nama lain? -->
-License
-
-Proyek ini menggunakan lisensi MIT — lihat file LICENSE untuk detail lengkap.

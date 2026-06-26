@@ -4,4 +4,3 @@ xgboost
 joblib
 kafka-python
 matplotlib
-pyspark
